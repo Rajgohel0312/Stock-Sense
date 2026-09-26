@@ -52,7 +52,6 @@ async function findRoleByName(roleName) {
   return result.rows[0] || null;
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | Update Last Login
@@ -106,7 +105,6 @@ async function findUserById(userId) {
   return result.rows[0] || null;
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | Update Password
@@ -126,7 +124,7 @@ async function updatePassword(userId, passwordHash) {
       id,
       auth_token_version
     `,
-    [passwordHash, userId]
+    [passwordHash, userId],
   );
 
   return result.rows[0] || null;
@@ -161,16 +159,12 @@ async function findUserByOAuth(provider, providerId) {
 
     LIMIT 1
     `,
-    [provider, providerId]
+    [provider, providerId],
   );
 
   return result.rows[0] || null;
 }
-async function createOAuthAccount({
-  userId,
-  provider,
-  providerAccountId
-}) {
+async function createOAuthAccount({ userId, provider, providerAccountId }) {
   const result = await db.raw(
     `
     INSERT INTO oauth_accounts (
@@ -183,11 +177,7 @@ async function createOAuthAccount({
     DO NOTHING
     RETURNING *
     `,
-    [
-      userId,
-      provider,
-      providerAccountId
-    ]
+    [userId, provider, providerAccountId],
   );
 
   return result.rows[0];
@@ -198,8 +188,33 @@ async function createUser({
   passwordHash,
   roleId,
   avatarUrl = null,
-  emailVerifiedAt = null
+  emailVerifiedAt = null,
 }) {
+  console.log("REPOSITORY createUser INPUT:", {
+    name,
+    email,
+    roleId,
+    passwordHash: passwordHash ? "[HASHED]" : null,
+    avatarUrl,
+    emailVerifiedAt,
+  });
+  const params = [
+    name,
+    email,
+    passwordHash,
+    roleId,
+    (avatarUrl = null),
+    (emailVerifiedAt = null),
+  ];
+
+  console.log("SQL PARAMS:", [
+    params[0],
+    params[1],
+    "[HASHED]",
+    params[3],
+    params[4],
+    params[5],
+  ]);
   const result = await db.raw(
     `
     INSERT INTO users (
@@ -211,16 +226,18 @@ async function createUser({
       email_verified_at
     )
     VALUES ($1, $2, $3, $4, $5, $6)
-    RETURNING *
-    `,
-    [
+        RETURNING
+      id,
+      role_id,
       name,
       email,
-      passwordHash,
-      roleId,
-      avatarUrl,
-      emailVerifiedAt
-    ]
+      avatar_url,
+      is_active,
+      email_verified_at,
+      created_at
+
+    `,
+    [name, email, passwordHash, roleId, avatarUrl, emailVerifiedAt],
   );
 
   return result.rows[0];
@@ -246,7 +263,7 @@ async function updateGoogleProfile(userId, avatarUrl) {
       last_login_at,
       updated_at
     `,
-    [avatarUrl, userId]
+    [avatarUrl, userId],
   );
 
   return result.rows[0] || null;
@@ -260,5 +277,5 @@ module.exports = {
   findUserByOAuth,
   createOAuthAccount,
   updatePassword,
-  updateGoogleProfile
+  updateGoogleProfile,
 };

@@ -44,7 +44,8 @@ async function signup({ name, email, password }) {
     */
 
   const role = await findRoleByName("warehouse_staff");
-
+  console.log("SIGNUP ROLE:", role);
+  console.log("SIGNUP ROLE ID:", role?.id);
   if (!role) {
     const error = new Error("Default user role is not configured.");
 
@@ -66,12 +67,17 @@ async function signup({ name, email, password }) {
     | Create user
     |--------------------------------------------------------------------------
     */
-
-  const user = await createUser({
-    role_id: role.id,
+  console.log("CREATE USER PAYLOAD:", {
+    roleId: role.id,
     name: name.trim(),
     email: normalizedEmail,
-    password_hash: passwordHash,
+    passwordHash: "[HASHED]",
+  });
+  const user = await createUser({
+    roleId: role.id,
+    name: name.trim(),
+    email: normalizedEmail,
+    passwordHash,
   });
 
   return user;
@@ -196,7 +202,6 @@ async function forgotPassword(email) {
 
   await authRedis.setOtpCooldown(normalizedEmail);
 
-  
   await sendPasswordResetOtp(normalizedEmail, otp);
 
   return {
