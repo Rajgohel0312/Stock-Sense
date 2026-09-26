@@ -3,6 +3,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const db = require("./database");
 const { pool } = require("./config/database/connection");
+const { errorHandler } = require("./middleware/errorHandler");
+const passport = require("./config/google");
 
 const { redisClient } = require("./redis/client");
 const apiRoutes = require("./routes/");
@@ -10,7 +12,6 @@ const apiRoutes = require("./routes/");
 const cookieParser = require("cookie-parser");
 
 const app = express();
-
 app.use(helmet());
 
 app.use(
@@ -23,6 +24,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(passport.initialize());
 
 /*
 |--------------------------------------------------------------------------
@@ -132,5 +134,7 @@ app.get("/health/query-builder", async (req, res) => {
 });
 
 app.use("/api", apiRoutes);
+
+app.use(errorHandler);
 
 module.exports = app;

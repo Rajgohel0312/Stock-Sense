@@ -19,6 +19,7 @@ async function findUserByEmail(email) {
       "u.email_verified_at",
       "u.last_login_at",
       "u.created_at",
+      "u.auth_token_version",
       "u.updated_at",
       {
         column: "r.name",
@@ -51,30 +52,6 @@ async function findRoleByName(roleName) {
   return result.rows[0] || null;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Create user
-|--------------------------------------------------------------------------
-*/
-
-async function createUser(data) {
-  const result = await db
-    .insert("users")
-    .values(data)
-    .returning([
-      "id",
-      "role_id",
-      "name",
-      "email",
-      "avatar_url",
-      "is_active",
-      "email_verified_at",
-      "created_at",
-    ])
-    .execute();
-
-  return result.rows[0];
-}
 
 /*
 |--------------------------------------------------------------------------
@@ -111,7 +88,7 @@ async function findUserById(userId) {
             u.email_verified_at,
             u.created_at,
             u.last_login_at,
-
+            u.auth_token_version,
             r.name AS role_name
 
         FROM users u
@@ -129,10 +106,159 @@ async function findUserById(userId) {
   return result.rows[0] || null;
 }
 
+
+/*
+|--------------------------------------------------------------------------
+| Update Password
+|--------------------------------------------------------------------------
+*/
+
+async function updatePassword(userId, passwordHash) {
+  const result = await db.raw(
+    `
+    UPDATE users
+    SET
+      password_hash = $1,
+      auth_token_version = auth_token_version + 1,
+      updated_at = NOW()
+    WHERE id = $2
+    RETURNING
+      id,
+      auth_token_version
+    `,
+    [passwordHash, userId]
+  );
+
+  return result.rows[0] || null;
+}
+async function findUserByOAuth(provider, providerId) {
+  const result = await db.raw(
+    `
+    SELECT
+      u.id,
+      u.role_id,
+      u.name,
+      u.email,
+      u.password_hash,
+      u.avatar_url,
+      u.is_active,
+      u.email_verified_at,
+      u.last_login_at,
+      u.created_at,
+      u.updated_at,
+      r.name AS role_name
+
+    FROM oauth_accounts oa
+
+    INNER JOIN users u
+      ON u.id = oa.user_id
+
+    INNER JOIN roles r
+      ON r.id = u.role_id
+
+    WHERE oa.provider = $1
+      AND oa.provider_account_id = $2
+
+    LIMIT 1
+    `,
+    [provider, providerId]
+  );
+
+  return result.rows[0] || null;
+}
+async function createOAuthAccount({
+  userId,
+  provider,
+  providerAccountId
+}) {
+  const result = await db.raw(
+    `
+    INSERT INTO oauth_accounts (
+      user_id,
+      provider,
+      provider_account_id
+    )
+    VALUES ($1, $2, $3)
+    ON CONFLICT (provider, provider_account_id)
+    DO NOTHING
+    RETURNING *
+    `,
+    [
+      userId,
+      provider,
+      providerAccountId
+    ]
+  );
+
+  return result.rows[0];
+}
+async function createUser({
+  name,
+  email,
+  passwordHash,
+  roleId,
+  avatarUrl = null,
+  emailVerifiedAt = null
+}) {
+  const result = await db.raw(
+    `
+    INSERT INTO users (
+      name,
+      email,
+      password_hash,
+      role_id,
+      avatar_url,
+      email_verified_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+    `,
+    [
+      name,
+      email,
+      passwordHash,
+      roleId,
+      avatarUrl,
+      emailVerifiedAt
+    ]
+  );
+
+  return result.rows[0];
+}
+async function updateGoogleProfile(userId, avatarUrl) {
+  const result = await db.raw(
+    `
+    UPDATE users
+    SET
+      avatar_url = $1,
+      email_verified_at = COALESCE(email_verified_at, NOW()),
+      updated_at = NOW()
+    WHERE id = $2
+    RETURNING
+      id,
+      role_id,
+      name,
+      email,
+      avatar_url,
+      is_active,
+      email_verified_at,
+      created_at,
+      last_login_at,
+      updated_at
+    `,
+    [avatarUrl, userId]
+  );
+
+  return result.rows[0] || null;
+}
 module.exports = {
   findUserByEmail,
   findRoleByName,
   createUser,
   updateLastLogin,
   findUserById,
+  findUserByOAuth,
+  createOAuthAccount,
+  updatePassword,
+  updateGoogleProfile
 };

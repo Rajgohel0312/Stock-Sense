@@ -53,8 +53,61 @@ function validateLogin(data) {
     errors,
   };
 }
+function validateForgotPassword(body) {
+  const email = String(body.email || "")
+    .trim()
+    .toLowerCase();
 
+  if (!email) {
+    throw new Error("Email is required.");
+  }
+
+  return { email };
+}
+
+function validateVerifyResetOtp(body) {
+  const email = String(body.email || "")
+    .trim()
+    .toLowerCase();
+
+  const otp = String(body.otp || "").trim();
+
+  if (!email) {
+    throw new Error("Email is required.");
+  }
+
+  if (!/^\d{6}$/.test(otp)) {
+    throw new Error("OTP must be a 6-digit number.");
+  }
+
+  return {
+    email,
+    otp,
+  };
+}
+
+function validateResetPassword(body) {
+  const resetToken = String(body.resetToken || "").trim();
+
+  const newPassword = String(body.newPassword || "");
+
+  if (!resetToken) {
+    throw new Error("Reset token is required.");
+  }
+
+  if (newPassword.length < 8) {
+    throw new Error("Password must be at least 8 characters.");
+  }
+
+  return {
+    resetToken,
+    newPassword,
+  };
+}
 module.exports = {
   validateSignup,
   validateLogin,
+  validateForgotPassword,
+  validateVerifyResetOtp,
+  validateResetPassword,
 };

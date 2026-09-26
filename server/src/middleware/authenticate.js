@@ -1,76 +1,57 @@
-const {
-    verifyAccessToken
-} = require("../modules/auth/auth.utils");
+const { verifyAccessToken } = require("../modules/auth/auth.utils");
 
-const db =
-    require("../database");
-
+const db = require("../database");
 
 async function authenticate(req, res, next) {
-
-    try {
-
-        /*
+  try {
+    /*
         |--------------------------------------------------------------------------
         | Get token from HTTP-only cookie
         |--------------------------------------------------------------------------
         */
 
-        const token =
-            req.cookies?.stocksense_access_token;
+    const token = req.cookies?.stocksense_access_token;
 
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required.",
+      });
+    }
 
-        if (!token) {
-
-            return res.status(401).json({
-                success: false,
-                message: "Authentication required."
-            });
-        }
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Verify JWT
         |--------------------------------------------------------------------------
         */
 
-        let payload;
+    let payload;
 
-        try {
+    try {
+      payload = verifyAccessToken(token);
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired authentication token.",
+      });
+    }
 
-            payload =
-                verifyAccessToken(token);
-
-        } catch (error) {
-
-            return res.status(401).json({
-                success: false,
-                message: "Invalid or expired authentication token."
-            });
-        }
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Token subject
         |--------------------------------------------------------------------------
         */
 
-        const userId =
-            payload.sub;
+    const userId = payload.sub;
 
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token.",
+      });
+    }
 
-        if (!userId) {
-
-            return res.status(401).json({
-                success: false,
-                message: "Invalid authentication token."
-            });
-        }
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Load CURRENT user from database
         |--------------------------------------------------------------------------
@@ -79,8 +60,8 @@ async function authenticate(req, res, next) {
         |
         */
 
-        const result = await db.raw(
-            `
+    const result = await db.raw(
+      `
             SELECT
                 u.id,
                 u.role_id,
@@ -101,71 +82,70 @@ async function authenticate(req, res, next) {
 
             LIMIT 1
             `,
-            [userId]
-        );
+      [userId],
+    );
 
+    const user = result.rows[0];
 
-        const user =
-            result.rows[0];
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | User no longer exists
         |--------------------------------------------------------------------------
         */
 
-        if (!user) {
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User account no longer exists.",
+      });
+    }
 
-            return res.status(401).json({
-                success: false,
-                message: "User account no longer exists."
-            });
-        }
+    if (
+      payload.tokenVersion !== undefined &&
+      payload.tokenVersion !== user.auth_token_version
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired. Please login again.",
+      });
+    }
 
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Account disabled
         |--------------------------------------------------------------------------
         */
 
-        if (!user.is_active) {
+    if (!user.is_active) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is inactive.",
+      });
+    }
 
-            return res.status(403).json({
-                success: false,
-                message: "Your account is inactive."
-            });
-        }
-
-
-        /*
+    /*
         |--------------------------------------------------------------------------
         | Attach current user to request
         |--------------------------------------------------------------------------
         */
 
-        req.user = {
-            id: user.id,
-            roleId: user.role_id,
-            role: user.role_name,
-            name: user.name,
-            email: user.email,
-            avatarUrl: user.avatar_url,
-            isActive: user.is_active,
-            emailVerifiedAt: user.email_verified_at
-        };
+    req.user = {
+      id: user.id,
+      roleId: user.role_id,
+      role: user.role_name,
+      name: user.name,
+      email: user.email,
+      avatarUrl: user.avatar_url,
+      isActive: user.is_active,
+      emailVerifiedAt: user.email_verified_at,
+    };
 
-
-        next();
-
-    } catch (error) {
-
-        next(error);
-    }
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
-
 module.exports = {
-    authenticate
+  authenticate,
 };

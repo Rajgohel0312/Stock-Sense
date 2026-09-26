@@ -13,7 +13,9 @@ const {
     connectRedis,
     disconnectRedis
 } = require("./redis/client");
-
+const {
+  verifyEmailConnection
+} = require("./services/email.service");
 async function startServer() {
     try {
         console.log("Starting StockSense...");
@@ -27,6 +29,9 @@ async function startServer() {
         // Redis
         await connectRedis();
 
+        await verifyEmailConnection();
+
+        
         const server = app.listen(env.port, () => {
             console.log(
                 `StockSense API running on port ${env.port}`
