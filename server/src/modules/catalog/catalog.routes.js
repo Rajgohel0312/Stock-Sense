@@ -26,6 +26,12 @@ router.patch(
   controller.updateCategory,
 );
 
+router.put(
+  "/categories/:id",
+  authorize("inventory_manager"),
+  controller.updateCategory,
+);
+
 router.delete(
   "/categories/:id",
   authorize("inventory_manager"),
@@ -33,6 +39,7 @@ router.delete(
 );
 
 router.get("/units", productController.listUnits);
+router.get("/uom", productController.listUnits);
 
 router.get("/products", productController.listProducts);
 
@@ -45,6 +52,12 @@ router.post(
 );
 
 router.patch(
+  "/products/:id",
+  authorize("inventory_manager"),
+  productController.updateProduct,
+);
+
+router.put(
   "/products/:id",
   authorize("inventory_manager"),
   productController.updateProduct,

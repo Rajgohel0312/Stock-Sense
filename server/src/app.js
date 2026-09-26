@@ -14,9 +14,27 @@ const cookieParser = require("cookie-parser");
 const app = express();
 app.use(helmet());
 
+const allowedOrigins = (
+  process.env.CLIENT_URL || "http://localhost:3000,http://localhost:5173"
+)
+  .split(",")
+  .map((origin) => origin.trim());
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+
+      if (
+        allowedOrigins.includes(origin) ||
+        process.env.NODE_ENV !== "production"
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   }),
 );
@@ -84,30 +102,6 @@ app.get("/health/services", async (req, res) => {
 | Query Builder Health
 |--------------------------------------------------------------------------
 */
-
-app.get("/health/query-builder", async (req, res) => {
-  try {
-    const roles = await db
-      .select(["id", "name", "description"])
-      .from("roles")
-      // .where("is_active", "=", true)
-      .orderBy("name", "ASC")
-      .execute();
-
-    res.json({
-      success: true,
-      count: roles.rowCount,
-      data: roles.rows,
-    });
-  } catch (error) {
-    console.error("Query builder test error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
 
 app.get("/health/query-builder", async (req, res) => {
   try {

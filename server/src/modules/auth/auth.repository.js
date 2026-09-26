@@ -268,6 +268,32 @@ async function updateGoogleProfile(userId, avatarUrl) {
 
   return result.rows[0] || null;
 }
+
+async function markEmailVerified(userId) {
+  const result = await db.raw(
+    `
+    UPDATE users
+    SET
+      email_verified_at = NOW(),
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING
+      id,
+      role_id,
+      name,
+      email,
+      avatar_url,
+      is_active,
+      email_verified_at,
+      created_at,
+      updated_at
+    `,
+    [userId],
+  );
+
+  return result.rows[0] || null;
+}
+
 module.exports = {
   findUserByEmail,
   findRoleByName,
@@ -278,4 +304,6 @@ module.exports = {
   createOAuthAccount,
   updatePassword,
   updateGoogleProfile,
+  markEmailVerified,
 };
+

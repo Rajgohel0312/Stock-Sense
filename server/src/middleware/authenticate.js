@@ -10,7 +10,13 @@ async function authenticate(req, res, next) {
         |--------------------------------------------------------------------------
         */
 
-    const token = req.cookies?.stocksense_access_token;
+    const authHeader = req.headers.authorization;
+    const bearerToken =
+      authHeader && authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
+
+    const token = req.cookies?.stocksense_access_token || bearerToken;
 
     if (!token) {
       return res.status(401).json({
@@ -70,6 +76,7 @@ async function authenticate(req, res, next) {
                 u.avatar_url,
                 u.is_active,
                 u.email_verified_at,
+                u.auth_token_version,
 
                 r.name AS role_name
 

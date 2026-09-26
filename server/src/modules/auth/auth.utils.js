@@ -41,6 +41,10 @@ function generateAccessToken(user) {
     {
       sub: user.id,
       roleId: user.role_id,
+      tokenVersion:
+        user.auth_token_version !== undefined
+          ? user.auth_token_version
+          : user.tokenVersion,
     },
     env.jwtSecret,
     {

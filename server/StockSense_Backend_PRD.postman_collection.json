@@ -1,0 +1,798 @@
+{
+  "info": {
+    "_postman_id": "stocksense-prd-collection",
+    "name": "StockSense Backend API - Complete PRD Flow",
+    "description": "Comprehensive Postman collection for StockSense Backend covering Receipts, Customers, Deliveries, Transfers, Adjustments, Reservations, Dashboard, Alerts, Audit Ledger, and Profile.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "productId", "value": "", "type": "string" },
+    { "key": "warehouseId", "value": "", "type": "string" },
+    { "key": "supplierId", "value": "", "type": "string" },
+    { "key": "locationAId", "value": "", "type": "string" },
+    { "key": "locationBId", "value": "", "type": "string" },
+    { "key": "customerId", "value": "", "type": "string" },
+    { "key": "receiptId", "value": "", "type": "string" },
+    { "key": "deliveryId", "value": "", "type": "string" },
+    { "key": "transferId", "value": "", "type": "string" },
+    { "key": "adjustmentId", "value": "", "type": "string" },
+    { "key": "reservationId", "value": "", "type": "string" },
+    { "key": "alertId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0. Setup & Auth",
+      "item": [
+        {
+          "name": "1. Signup Inventory Manager",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Inventory Manager\",\n  \"email\": \"manager@stocksense.com\",\n  \"password\": \"Password123!\",\n  \"role\": \"inventory_manager\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/signup", "host": ["{{baseUrl}}"], "path": ["api", "auth", "signup"] }
+          }
+        },
+        {
+          "name": "2. Login (Auto Sets {{token}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager@stocksense.com\",\n  \"password\": \"Password123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+          }
+        },
+        {
+          "name": "3. Get Products (Extract {{productId}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.collectionVariables.set('productId', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/catalog/products", "host": ["{{baseUrl}}"], "path": ["api", "catalog", "products"] }
+          }
+        },
+        {
+          "name": "4. Get Warehouses (Extract {{warehouseId}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.collectionVariables.set('warehouseId', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/inventory/warehouses", "host": ["{{baseUrl}}"], "path": ["api", "inventory", "warehouses"] }
+          }
+        },
+        {
+          "name": "5. Get Locations (Extract {{locationAId}}, {{locationBId}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.collectionVariables.set('locationAId', json.data[0].id);",
+                  "  const whId = json.data[0].warehouse_id || json.data[0].warehouseId;",
+                  "  if (whId) {",
+                  "    pm.collectionVariables.set('warehouseId', whId);",
+                  "  }",
+                  "  if (json.data.length >= 2) {",
+                  "    pm.collectionVariables.set('locationBId', json.data[1].id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/locations?warehouseId={{warehouseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "locations"],
+              "query": [
+                { "key": "warehouseId", "value": "{{warehouseId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Get Suppliers (Extract {{supplierId}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.collectionVariables.set('supplierId', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/inventory/suppliers", "host": ["{{baseUrl}}"], "path": ["api", "inventory", "suppliers"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 1 - Module 1: Receipts (+Stock)",
+      "item": [
+        {
+          "name": "1. Create Draft Receipt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('receiptId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierId\": \"{{supplierId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"notes\": \"Supplier shipment #401\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/receipts", "host": ["{{baseUrl}}"], "path": ["api", "receipts"] }
+          }
+        },
+        {
+          "name": "2. Add Item to Receipt (Quantity 100)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"locationId\": \"{{locationAId}}\",\n  \"quantity\": 100\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/receipts/{{receiptId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "receipts", "{{receiptId}}", "items"] }
+          }
+        },
+        {
+          "name": "3. Get Receipt by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/receipts/{{receiptId}}", "host": ["{{baseUrl}}"], "path": ["api", "receipts", "{{receiptId}}"] }
+          }
+        },
+        {
+          "name": "4. Validate Receipt (Increases Stock + Ledger)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/receipts/{{receiptId}}/validate", "host": ["{{baseUrl}}"], "path": ["api", "receipts", "{{receiptId}}", "validate"] }
+          }
+        },
+        {
+          "name": "5. Verify Stock Increased",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/inventory/stock/{{productId}}/{{locationAId}}", "host": ["{{baseUrl}}"], "path": ["api", "inventory", "stock", "{{productId}}", "{{locationAId}}"] }
+          }
+        },
+        {
+          "name": "6. Cancel Receipt (Draft Only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/receipts/{{receiptId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "receipts", "{{receiptId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 2 - Module 2: Customers",
+      "item": [
+        {
+          "name": "1. Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('customerId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nexus Retailers\",\n  \"email\": \"orders@nexus.com\",\n  \"phone\": \"+15550199\",\n  \"address\": \"450 Commercial Ave\",\n  \"customer_tier\": \"gold\",\n  \"currency\": \"USD\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/customers", "host": ["{{baseUrl}}"], "path": ["api", "customers"] }
+          }
+        },
+        {
+          "name": "2. List Customers with Filters (search, tier, active)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?tier=gold&active=true&search=Nexus",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "customers"],
+              "query": [
+                { "key": "tier", "value": "gold" },
+                { "key": "active", "value": "true" },
+                { "key": "search", "value": "Nexus" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Get Customer by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/customers/{{customerId}}", "host": ["{{baseUrl}}"], "path": ["api", "customers", "{{customerId}}"] }
+          }
+        },
+        {
+          "name": "4. Update Customer (Upgrade to Platinum)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_tier\": \"platinum\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/customers/{{customerId}}", "host": ["{{baseUrl}}"], "path": ["api", "customers", "{{customerId}}"] }
+          }
+        },
+        {
+          "name": "5. Deactivate Customer (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/customers/{{customerId}}", "host": ["{{baseUrl}}"], "path": ["api", "customers", "{{customerId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 3 - Module 3: Deliveries (-Stock)",
+      "item": [
+        {
+          "name": "1. Create Delivery",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('deliveryId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"locationId\": \"{{locationAId}}\",\n  \"referenceNumber\": \"SO-9801\",\n  \"notes\": \"Urgent shipment\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/deliveries", "host": ["{{baseUrl}}"], "path": ["api", "deliveries"] }
+          }
+        },
+        {
+          "name": "2. Add Item to Delivery (Quantity 20)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 20\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/deliveries/{{deliveryId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "deliveries", "{{deliveryId}}", "items"] }
+          }
+        },
+        {
+          "name": "3. Mark Ready (DRAFT -> READY)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/deliveries/{{deliveryId}}/ready", "host": ["{{baseUrl}}"], "path": ["api", "deliveries", "{{deliveryId}}", "ready"] }
+          }
+        },
+        {
+          "name": "4. Mark Picked (READY -> PICKED)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/deliveries/{{deliveryId}}/pick", "host": ["{{baseUrl}}"], "path": ["api", "deliveries", "{{deliveryId}}", "pick"] }
+          }
+        },
+        {
+          "name": "5. Mark Packed (PICKED -> PACKED)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/deliveries/{{deliveryId}}/pack", "host": ["{{baseUrl}}"], "path": ["api", "deliveries", "{{deliveryId}}", "pack"] }
+          }
+        },
+        {
+          "name": "6. Validate Delivery (PACKED -> DONE) Stock Decreases",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/deliveries/{{deliveryId}}/validate", "host": ["{{baseUrl}}"], "path": ["api", "deliveries", "{{deliveryId}}", "validate"] }
+          }
+        },
+        {
+          "name": "7. Cancel Delivery",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/deliveries/{{deliveryId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "deliveries", "{{deliveryId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 4 - Module 4: Internal Transfers",
+      "item": [
+        {
+          "name": "1. Create Transfer (Location A -> Location B)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('transferId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceWarehouseId\": \"{{warehouseId}}\",\n  \"destinationWarehouseId\": \"{{warehouseId}}\",\n  \"sourceLocationId\": \"{{locationAId}}\",\n  \"destinationLocationId\": \"{{locationBId}}\",\n  \"notes\": \"Move 30 units to Rack B\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/transfers", "host": ["{{baseUrl}}"], "path": ["api", "transfers"] }
+          }
+        },
+        {
+          "name": "2. Add Item to Transfer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 30\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/transfers/{{transferId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "transfers", "{{transferId}}", "items"] }
+          }
+        },
+        {
+          "name": "3. Mark Ready",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transfers/{{transferId}}/ready", "host": ["{{baseUrl}}"], "path": ["api", "transfers", "{{transferId}}", "ready"] }
+          }
+        },
+        {
+          "name": "4. Validate Transfer (Atomic Source -30, Dest +30)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transfers/{{transferId}}/validate", "host": ["{{baseUrl}}"], "path": ["api", "transfers", "{{transferId}}", "validate"] }
+          }
+        },
+        {
+          "name": "5. Cancel Transfer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/transfers/{{transferId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "transfers", "{{transferId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 5 - Module 5: Stock Adjustments",
+      "item": [
+        {
+          "name": "1. Create Adjustment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('adjustmentId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"{{warehouseId}}\",\n  \"reason\": \"Monthly physical stock count\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/adjustments", "host": ["{{baseUrl}}"], "path": ["api", "adjustments"] }
+          }
+        },
+        {
+          "name": "2. Add Counted Item (Physical count = 45)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"locationId\": \"{{locationAId}}\",\n  \"countedQuantity\": 45\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/adjustments/{{adjustmentId}}/items", "host": ["{{baseUrl}}"], "path": ["api", "adjustments", "{{adjustmentId}}", "items"] }
+          }
+        },
+        {
+          "name": "3. Validate Adjustment (Calculates Diff & Updates Stock)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/adjustments/{{adjustmentId}}/validate", "host": ["{{baseUrl}}"], "path": ["api", "adjustments", "{{adjustmentId}}", "validate"] }
+          }
+        },
+        {
+          "name": "4. Cancel Adjustment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/adjustments/{{adjustmentId}}/cancel", "host": ["{{baseUrl}}"], "path": ["api", "adjustments", "{{adjustmentId}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 6 - Module 6: Stock Reservations",
+      "item": [
+        {
+          "name": "1. Reserve 15 Units",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('reservationId', json.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"locationId\": \"{{locationAId}}\",\n  \"quantity\": 15,\n  \"referenceType\": \"sales_order\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/inventory/reservations", "host": ["{{baseUrl}}"], "path": ["api", "inventory", "reservations"] }
+          }
+        },
+        {
+          "name": "2. Get Reservations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/inventory/reservations", "host": ["{{baseUrl}}"], "path": ["api", "inventory", "reservations"] }
+          }
+        },
+        {
+          "name": "3. Release Reservation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/inventory/reservations/{{reservationId}}/release", "host": ["{{baseUrl}}"], "path": ["api", "inventory", "reservations", "{{reservationId}}", "release"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 7 - Module 7: Dashboard API",
+      "item": [
+        {
+          "name": "1. Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard/summary", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "summary"] }
+          }
+        },
+        {
+          "name": "2. Dashboard Low Stock",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard/low-stock", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "low-stock"] }
+          }
+        },
+        {
+          "name": "3. Dashboard Recent Movements",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard/recent-movements", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "recent-movements"] }
+          }
+        },
+        {
+          "name": "4. Dashboard Pending Documents",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard/pending-documents", "host": ["{{baseUrl}}"], "path": ["api", "dashboard", "pending-documents"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 8 - Module 8: Smart Inventory Filters",
+      "item": [
+        {
+          "name": "1. Stock Filter (Search, Warehouse, LowStock)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/stock?warehouseId={{warehouseId}}&search=Laptop",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "stock"],
+              "query": [
+                { "key": "warehouseId", "value": "{{warehouseId}}" },
+                { "key": "search", "value": "Laptop" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Unified Documents Filter (Multi-document query)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/documents?warehouseId={{warehouseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "documents"],
+              "query": [
+                { "key": "warehouseId", "value": "{{warehouseId}}" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 9 - Module 9: Alerts",
+      "item": [
+        {
+          "name": "1. List Alerts (Auto-synced)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.collectionVariables.set('alertId', json.data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/alerts", "host": ["{{baseUrl}}"], "path": ["api", "alerts"] }
+          }
+        },
+        {
+          "name": "2. Mark Alert as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isRead\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/alerts/{{alertId}}/read", "host": ["{{baseUrl}}"], "path": ["api", "alerts", "{{alertId}}", "read"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 10 - Module 10: Audit / Stock Ledger",
+      "item": [
+        {
+          "name": "1. Query Stock Ledger (Filters: product, movementType)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/inventory/stock-ledger?productId={{productId}}&movementType=delivery",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "inventory", "stock-ledger"],
+              "query": [
+                { "key": "productId", "value": "{{productId}}" },
+                { "key": "movementType", "value": "delivery" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flow 11 - Module 11: Profile / Account",
+      "item": [
+        {
+          "name": "1. Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/profile", "host": ["{{baseUrl}}"], "path": ["api", "profile"] }
+          }
+        },
+        {
+          "name": "2. Update Profile Name",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Inventory Manager\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/profile", "host": ["{{baseUrl}}"], "path": ["api", "profile"] }
+          }
+        },
+        {
+          "name": "3. Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword456!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/api/profile/change-password", "host": ["{{baseUrl}}"], "path": ["api", "profile", "change-password"] }
+          }
+        },
+        {
+          "name": "4. Logout All Sessions (Invalidates JWTs)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/profile/logout-all", "host": ["{{baseUrl}}"], "path": ["api", "profile", "logout-all"] }
+          }
+        }
+      ]
+    }
+  ]
+}

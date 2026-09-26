@@ -3,15 +3,15 @@ const express = require("express");
 const router = express.Router();
 
 const { authenticate } = require("../../middleware/authenticate");
-
 const { authorize } = require("../../middleware/authorize");
 
 const warehouseController = require("./warehouse.controller");
-
 const locationController = require("./location.controller");
 const stockController = require("./stock.controller");
 const reorderController = require("./reorder.controller");
 const supplierController = require("./supplier.controller");
+const reservationController = require("./reservation.controller");
+
 router.use(authenticate);
 
 /*
@@ -66,6 +66,10 @@ router.delete(
   locationController.deactivateLocation,
 );
 
+/*
+ * STOCK & AUDIT LEDGER
+ */
+
 router.get("/stock", stockController.listStock);
 
 router.get("/stock/:productId/:locationId", stockController.getStock);
@@ -77,6 +81,41 @@ router.post(
 );
 
 router.get("/stock-ledger", stockController.getLedger);
+router.get("/ledger", stockController.getLedger);
+
+/*
+ * UNIFIED DOCUMENTS FILTER
+ */
+router.get("/documents", stockController.listDocuments);
+
+/*
+ * RESERVATIONS
+ */
+router.post(
+  "/reservations",
+  authorize("inventory_manager"),
+  reservationController.create,
+);
+
+router.get("/reservations", reservationController.list);
+
+router.get("/reservations/:id", reservationController.getById);
+
+router.post(
+  "/reservations/:id/release",
+  authorize("inventory_manager"),
+  reservationController.release,
+);
+
+router.delete(
+  "/reservations/:id",
+  authorize("inventory_manager"),
+  reservationController.release,
+);
+
+/*
+ * REORDER RULES
+ */
 
 router.get("/reorder-rules", reorderController.listRules);
 
@@ -94,26 +133,24 @@ router.patch(
   reorderController.updateRule,
 );
 
-router.get(
-  "/suppliers",
-  supplierController.listSuppliers
-);
+/*
+ * SUPPLIERS
+ */
 
-router.get(
-  "/suppliers/:id",
-  supplierController.getSupplier
-);
+router.get("/suppliers", supplierController.listSuppliers);
+
+router.get("/suppliers/:id", supplierController.getSupplier);
 
 router.post(
   "/suppliers",
   authorize("inventory_manager"),
-  supplierController.createSupplier
+  supplierController.createSupplier,
 );
 
 router.patch(
   "/suppliers/:id",
   authorize("inventory_manager"),
-  supplierController.updateSupplier
+  supplierController.updateSupplier,
 );
 
 module.exports = router;

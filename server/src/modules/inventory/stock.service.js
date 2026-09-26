@@ -156,14 +156,17 @@ async function changeStock({
 }
 
 async function getLedger(filters) {
-  return repository.getLedger(
-    filters
-  );
+  return repository.getLedger(filters);
+}
+
+async function listDocuments(filters) {
+  return repository.findDocuments(filters);
 }
 
 module.exports = {
   listStock,
   getStock,
   changeStock,
-  getLedger
+  getLedger,
+  listDocuments,
 };

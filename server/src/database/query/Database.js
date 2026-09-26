@@ -50,6 +50,9 @@ class Database {
       client.release();
     }
   }
+  async query(text, values = []) {
+    return this.executor.query(text, values);
+  }
 }
 
 module.exports = Database;

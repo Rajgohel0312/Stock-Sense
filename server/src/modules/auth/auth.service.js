@@ -14,11 +14,12 @@ const {
   generateResetToken,
   hashResetToken,
 } = require("./auth.utils");
-const { sendPasswordResetOtp } = require("../../services/email.service");
+const { sendPasswordResetOtp, sendEmailVerificationOtp } = require("../../services/email.service");
 const authRedis = require("./auth.redis");
 const authRepository = require("./auth.repository");
 
-async function signup({ name, email, password }) {
+
+async function signup({ name, email, password, role: requestedRole }) {
   const normalizedEmail = email.trim().toLowerCase();
 
   /*
@@ -39,11 +40,16 @@ async function signup({ name, email, password }) {
 
   /*
     |--------------------------------------------------------------------------
-    | Find default role
+    | Find requested role or default
     |--------------------------------------------------------------------------
     */
 
-  const role = await findRoleByName("warehouse_staff");
+  const targetRoleName = requestedRole || "warehouse_staff";
+  let role = await findRoleByName(targetRoleName);
+  if (!role) {
+    role = await findRoleByName("warehouse_staff");
+  }
+
   console.log("SIGNUP ROLE:", role);
   console.log("SIGNUP ROLE ID:", role?.id);
   if (!role) {
@@ -254,28 +260,46 @@ async function verifyResetOtp(email, otp) {
     resetToken,
   };
 }
-async function resetPassword(resetToken, newPassword) {
-  const tokenHash = hashResetToken(resetToken);
+async function resetPassword(resetTokenOrPayload, newPasswordParam) {
+  let resetToken = resetTokenOrPayload;
+  let newPassword = newPasswordParam;
 
+  if (typeof resetTokenOrPayload === "object" && resetTokenOrPayload !== null) {
+    if (resetTokenOrPayload.resetToken) {
+      resetToken = resetTokenOrPayload.resetToken;
+      newPassword = resetTokenOrPayload.newPassword;
+    } else if (resetTokenOrPayload.email && resetTokenOrPayload.otp) {
+      // 1-step inline reset with email + otp
+      const verifyRes = await verifyResetOtp(
+        resetTokenOrPayload.email,
+        resetTokenOrPayload.otp,
+      );
+      resetToken = verifyRes.resetToken;
+      newPassword = resetTokenOrPayload.newPassword;
+    }
+  }
+
+  if (!resetToken) {
+    const error = new Error("Reset token or verification OTP is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const tokenHash = hashResetToken(resetToken);
   const userId = await authRedis.getResetTokenUser(tokenHash);
 
   if (!userId) {
     const error = new Error("Invalid or expired reset token.");
-
     error.statusCode = 401;
-
     throw error;
   }
 
   const passwordHash = await hashPassword(newPassword);
-
   const user = await authRepository.updatePassword(userId, passwordHash);
 
   if (!user) {
     const error = new Error("Unable to reset password.");
-
     error.statusCode = 400;
-
     throw error;
   }
 
@@ -286,10 +310,77 @@ async function resetPassword(resetToken, newPassword) {
   };
 }
 
+async function sendVerificationOtp(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await authRepository.findUserByEmail(normalizedEmail);
+
+  if (!user) {
+    return { message: "If an account exists, a verification code has been sent." };
+  }
+
+  if (user.email_verified_at) {
+    return { message: "Email is already verified." };
+  }
+
+  const otp = generateOtp();
+  const otpHash = hashOtp(otp);
+
+  await authRedis.saveEmailVerificationOtp(user.id, otpHash);
+  await sendEmailVerificationOtp(normalizedEmail, otp);
+
+  return {
+    message: "Verification code sent to your email.",
+  };
+}
+
+async function verifyEmail(email, otp) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await authRepository.findUserByEmail(normalizedEmail);
+
+  if (!user) {
+    const error = new Error("Account not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const attempts = await authRedis.incrementEmailVerificationAttempts(user.id);
+  if (attempts > 5) {
+    await authRedis.deleteEmailVerificationOtp(user.id);
+    const error = new Error("Too many invalid attempts. Please request a new verification code.");
+    error.statusCode = 429;
+    throw error;
+  }
+
+  const storedOtpHash = await authRedis.getEmailVerificationOtp(user.id);
+  if (!storedOtpHash) {
+    const error = new Error("Verification code expired or not found. Please request a new one.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const submittedOtpHash = hashOtp(String(otp).trim());
+  if (submittedOtpHash !== storedOtpHash) {
+    const error = new Error("Invalid verification code.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const updatedUser = await authRepository.markEmailVerified(user.id);
+  await authRedis.deleteEmailVerificationOtp(user.id);
+
+  return {
+    user: updatedUser,
+    message: "Email address verified successfully.",
+  };
+}
+
 module.exports = {
   signup,
   login,
   forgotPassword,
   verifyResetOtp,
   resetPassword,
+  sendVerificationOtp,
+  verifyEmail,
 };
+
