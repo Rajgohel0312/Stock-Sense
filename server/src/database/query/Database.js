@@ -29,7 +29,7 @@ class Database {
   }
 
   async transaction(callback) {
-    const client = await this.pool.connect();
+    const client = await this.executor.connect();
 
     try {
       await client.query("BEGIN");
