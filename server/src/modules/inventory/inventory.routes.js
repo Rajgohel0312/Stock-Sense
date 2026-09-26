@@ -10,8 +10,8 @@ const warehouseController = require("./warehouse.controller");
 
 const locationController = require("./location.controller");
 const stockController = require("./stock.controller");
-
-
+const reorderController = require("./reorder.controller");
+const supplierController = require("./supplier.controller");
 router.use(authenticate);
 
 /*
@@ -66,25 +66,54 @@ router.delete(
   locationController.deactivateLocation,
 );
 
-router.get(
-  "/stock",
-  stockController.listStock
-);
+router.get("/stock", stockController.listStock);
 
-router.get(
-  "/stock/:productId/:locationId",
-  stockController.getStock
-);
+router.get("/stock/:productId/:locationId", stockController.getStock);
 
 router.post(
   "/stock/change",
   authorize("inventory_manager"),
-  stockController.changeStock
+  stockController.changeStock,
+);
+
+router.get("/stock-ledger", stockController.getLedger);
+
+router.get("/reorder-rules", reorderController.listRules);
+
+router.get("/reorder-rules/:id", reorderController.getRule);
+
+router.post(
+  "/reorder-rules",
+  authorize("inventory_manager"),
+  reorderController.createRule,
+);
+
+router.patch(
+  "/reorder-rules/:id",
+  authorize("inventory_manager"),
+  reorderController.updateRule,
 );
 
 router.get(
-  "/stock-ledger",
-  stockController.getLedger
+  "/suppliers",
+  supplierController.listSuppliers
+);
+
+router.get(
+  "/suppliers/:id",
+  supplierController.getSupplier
+);
+
+router.post(
+  "/suppliers",
+  authorize("inventory_manager"),
+  supplierController.createSupplier
+);
+
+router.patch(
+  "/suppliers/:id",
+  authorize("inventory_manager"),
+  supplierController.updateSupplier
 );
 
 module.exports = router;
